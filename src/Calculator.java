@@ -1,115 +1,108 @@
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Scanner;
 
 class Calculator {
-    private static final Map<String, Integer> romanToArabic = new HashMap<>();
-    private static final Map<Integer, String> arabicToRoman = new HashMap<>();
+
+    private static final Map<String, Integer> romanToArabic = new LinkedHashMap<>();
+    private static final Map<Integer, String> arabicToRoman = new LinkedHashMap<>();
+
+
+    private static final String[] ROMAN_NUMERALS = {"C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
+    private static final int[] ARABIC_VALUES = {100, 90, 50, 40, 10, 9, 5, 4, 1};
+
 
     static {
-        romanToArabic.put("0", 0);
-        romanToArabic.put("I", 1);
-        romanToArabic.put("II", 2);
-        romanToArabic.put("III", 3);
-        romanToArabic.put("IV", 4);
-        romanToArabic.put("V", 5);
-        romanToArabic.put("VI", 6);
-        romanToArabic.put("VII", 7);
-        romanToArabic.put("VIII", 8);
-        romanToArabic.put("IX", 9);
-        romanToArabic.put("X", 10);
 
-        arabicToRoman.put(0, "0");
-        arabicToRoman.put(1, "I");
-        arabicToRoman.put(2, "II");
-        arabicToRoman.put(3, "III");
-        arabicToRoman.put(4, "IV");
-        arabicToRoman.put(5, "V");
-        arabicToRoman.put(6, "VI");
-        arabicToRoman.put(7, "VII");
-        arabicToRoman.put(8, "VIII");
-        arabicToRoman.put(9, "IX");
-        arabicToRoman.put(10, "X");
+        for (int i = 0; i <= 100; i++) {
+            String roman = convertToRoman(i);
+            romanToArabic.put(roman, i);
+            arabicToRoman.put(i, roman);
+        }
+    }
+
+    private static String convertToRoman(int value) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < ARABIC_VALUES.length; i++) {
+            while (value >= ARABIC_VALUES[i]) {
+                result.append(ROMAN_NUMERALS[i]);
+                value -= ARABIC_VALUES[i];
+            }
+        }
+        return result.toString();
     }
 
     public static String calc(String input) {
-        String[] parts = input.split(" ");
+
+        String[] parts = input.trim().split("\\s+");
+
         if (parts.length != 3) {
-            throw new IllegalArgumentException("Неверный ввод. Формат: 'число1 операция число2'");
+            throw new IllegalArgumentException("Неверный ввод. Формат: 'число1 операция число2'.");
         }
 
-        validateOperandType(parts[0], parts[2]);
+        int num1 = parseOperand(parts[0]);
+        int num2 = parseOperand(parts[2]);
+        String operator = parts[1];
 
-        int num1 = convertOperand(parts[0]);
-        int num2 = convertOperand(parts[2]);
 
-        int result = performOperation(num1, num2, parts[1]);
+        int result = performOperation(num1, num2, operator);
 
-        if (isRoman(parts[0])) {
-            if (result < 1) {
-                throw new IllegalArgumentException("Результат для римских чисел должен быть положительным.");
+        if (romanToArabic.containsKey(parts[0].toUpperCase())) {
+            if (result > 0) {
+                return convertToRoman(result);
+            } else {
+                return "Ошибка в выражении. Введите корректное выражение с римскими цифрами";
             }
-            return arabicToRoman.get(result);
-        } else {
-            return String.valueOf(result);
-        }    }
-
-    private static void validateOperandType(String firstOperand, String secondOperand) {
-        boolean isRoman = isRoman(firstOperand) && isRoman(secondOperand);
-        boolean isArabic = !isRoman && isArabic(firstOperand) && isArabic(secondOperand);
-        if (!isRoman && !isArabic) {
-            throw new IllegalArgumentException("Оба числа должны быть либо арабскими, либо римскими.");
         }
+
+        return String.valueOf(result);
     }
-    private static int convertOperand(String operand) {
-        if (romanToArabic.containsKey(operand)) {
-            return romanToArabic.get(operand);
+
+    private static int parseOperand(String operand) {
+        if (romanToArabic.containsKey(operand.toUpperCase())) {
+            return romanToArabic.get(operand.toUpperCase());
         }
         try {
-            int arabicNumber = Integer.parseInt(operand);
-            if (arabicNumber < 1 || arabicNumber > 10) {
-                throw new IllegalArgumentException("Числа должны быть в диапазоне от 1 до 10.");
+            int value = Integer.parseInt(operand);
+            if (value < 0 || value > 10) {
+                throw new IllegalArgumentException("Число должно быть в диапазоне от 1 до 10.");
             }
-            return arabicNumber;
+            return value;
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Ошибка ввода числа: " + operand);
+            throw new IllegalArgumentException("Неверный формат числа: " + operand);
         }
     }
 
     private static int performOperation(int num1, int num2, String operator) {
+
         return switch (operator) {
             case "+" -> num1 + num2;
             case "-" -> num1 - num2;
             case "*" -> num1 * num2;
             case "/" -> {
-                if (num2 == 0) throw new ArithmeticException("Деление на 0 запрещено.");
+                if (num2 == 0) {
+                    throw new ArithmeticException("Деление на 0 запрещено.");
+                }
                 yield num1 / num2;
             }
-            default -> throw new IllegalArgumentException("Неверный оператор. Поддерживаемые операторы: +, -, *, /");
+
+            default -> throw new IllegalArgumentException("Неверный оператор. Используйте: +, -, *, /");
         };
     }
 
-    private static boolean isRoman(String number) {
-        return romanToArabic.containsKey(number);
-    }
-
-    private static boolean isArabic(String number) {
-        try {
-            int arabicNumber = Integer.parseInt(number);
-            return arabicNumber >= 0 && arabicNumber <= 10;
-        } catch (NumberFormatException e) {
-            return false;
-        }
-    }
 
     public static void main(String[] args) {
+
         Scanner scanner = new Scanner(System.in);
         System.out.println("Введите выражение (например, '1 + 2' или 'I + II'):");
+
         String input = scanner.nextLine();
+
         try {
             String result = calc(input);
             System.out.println("Результат: " + result);
         } catch (Exception e) {
+
             System.out.println("Ошибка: " + e.getMessage());
         }
     }
